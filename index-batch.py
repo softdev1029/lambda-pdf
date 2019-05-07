@@ -13,9 +13,10 @@ def handler(event, context):
   print("Reading options from event")
   print(event)
 
-  srcBucket = event['Records'][0]['s3']['bucket']['name']
-  srcKey = event['Records'][0]['s3']['object']['key']
+  srcBucket = event['tasks'][0]['s3BucketArn']
+  srcKey = event['tasks'][0]['s3Key']
 
+  srcBucket = srcBucket.replace('arn:aws:s3:::', '')
   print("Read... {}/{}".format(srcBucket, srcKey))
 
   # dst bucket
