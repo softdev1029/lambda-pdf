@@ -9,18 +9,19 @@ SRC_EXT = ".pdf"
 TMP_FILE = "/tmp/1.pdf"
 
 def handler(event, context):
+  
   # Read options from the event.
-  print("Reading options from event")
-  print(event)
+  # print("Reading options from event")
+  # print(event)
 
   srcBucket = event['tasks'][0]['s3BucketArn']
+  srcBucket = srcBucket.replace('arn:aws:s3:::', '')
   srcKey = event['tasks'][0]['s3Key']
 
-  srcBucket = srcBucket.replace('arn:aws:s3:::', '')
-  print("Read... {}/{}".format(srcBucket, srcKey))
+  # print("Read... {}/{}".format(srcBucket, srcKey))
 
   # dst bucket
-  dstBucket = srcBucket#DST_BUCKET
+  dstBucket = DST_BUCKET
   dstKey = srcKey.replace(SRC_EXT, '')
 
   # Sanity check: validate that source and destination are different buckets.
