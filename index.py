@@ -12,17 +12,22 @@ TMP_DIR = "/tmp"
 def handler(event, context):
 
   # Read options from the event.
-  print("Reading options from event")
+  print("<<< <<< <<< Starting to process S3 Add Event")
   print(event)
 
   try:
     srcBucket = event['Records'][0]['s3']['bucket']['name']
     srcKey = event['Records'][0]['s3']['object']['key']
   except Exception as e:
-    print("Failed reading options. {}".format(e))
+    print("Failed reading options. {} >>> >>> >>>".format(e))
     return
 
-  print("Read... {}/{}".format(srcBucket, srcKey))
+  print("Reading {}/{}".format(srcBucket, srcKey))
+
+  # Checking the extension
+  if not srcKey.endswith(SRC_EXT):
+    print('Skipping non-pdf {} >>> >>> >>>'.format(srcKey))
+    return
 
   # dst bucket
   dstBucket = DST_BUCKET
@@ -30,7 +35,7 @@ def handler(event, context):
 
   # Sanity check: validate that source and destination are different buckets.
   # if (srcBucket == dstBucket) :
-  #   print("Destination bucket must not match source bucket.")
+  #   print("Destination bucket must not match source bucket >>> >>> >>>")
   #   return
 
   # Grabs the source file
@@ -40,19 +45,18 @@ def handler(event, context):
         key=srcKey,
     )
     obj_body = obj.get()['Body'].read()
+  except Exception as e:
+    print("Failed downloading source file. {} >>> >>> >>>".format(e))
+    return
+
+  try:
     pdf_file = srcKey.replace('/', '-')
     src_name = pdf_file.replace(SRC_EXT, '')
     file = open(TMP_DIR + '/' + pdf_file, 'wb')
     file.write(obj_body)
     file.close()
   except Exception as e:
-    print("Failed downloading source file. {}".format(e))
-    return
-
-  # Checking the extension and
-  # Defining the buffer format
-  if not srcKey.endswith(SRC_EXT):
-    print('skipping non-pdf ' + srcKey)
+    print("Failed writing source file. {} : {} >>> >>> >>>".format(e, TMP_DIR + '/' + pdf_file))
     return
 
   try:
@@ -60,16 +64,25 @@ def handler(event, context):
     rlt = os.popen('ls ' + TMP_DIR).readlines()
     print(rlt)
 
-    png_file = pdf_file.replace(SRC_EXT, DST_EXT)
-    rlt = os.popen("convert {}/{} -density 225 -background white -alpha remove -resize 1000x4000 {}/{}".format(TMP_DIR, pdf_file, TMP_DIR, png_file)).readlines()
+    rlt = os.popen('./convert --version').readlines()
     print(rlt)
+
+    png_file = pdf_file.replace(SRC_EXT, DST_EXT)
+
+    exists = os.path.isfile(TMP_DIR + '/' + pdf_file)
+    if exists:
+      rlt = os.popen("convert {}/{} -density 225 -background white -alpha remove -resize 1000x4000 {}/{}".format(TMP_DIR, pdf_file, TMP_DIR, png_file)).readlines()
+      print(rlt)
+    else:
+      print("Not found file={}/{} >>> >>> >>>".format(TMP_DIR, pdf_file))
+      return
 
     rlt = os.popen('ls ' + TMP_DIR).readlines()
     print(rlt)
 
     os.remove(TMP_DIR + '/' + pdf_file)
   except Exception as e:
-    print("Failed converting. {}".format(e))
+    print("Failed converting. {} >>> >>> >>>".format(e))
     return
 
   for file in os.listdir(TMP_DIR):
@@ -79,7 +92,10 @@ def handler(event, context):
         buffer = img_file.read()
         os.remove(TMP_DIR + '/' + file)
         img_file.close()
+      except Exception as e:
+        print("Failed reading {} file={}".format(e, TMP_DIR + '/' + file))
 
+      try:
         index = file.replace(src_name + '-', '')
         index = index.replace(DST_EXT, '')
         img_name = "{}-{}{}".format(dstKey, index, DST_EXT)
@@ -93,4 +109,4 @@ def handler(event, context):
         print("Uploaded... {}/{}".format(dstBucket, img_name))
       except Exception as e:
         print("Failed uploading {} file={}".format(e, file))
-  print("Done all action")
+  print("Done all action >>> >>> >>>")
