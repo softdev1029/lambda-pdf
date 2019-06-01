@@ -9,11 +9,13 @@ DST_BUCKET = "prodsdsimg"
 SRC_EXT = ".pdf"
 DST_EXT = ".png"
 TMP_DIR = "/tmp"
+VERSION = 1
+MADE_TIME = '05-10 4:10 PM'
 
 def handler(event, context):
 
   # Read options from the event.
-  print("<<< <<< <<< Starting to process S3 Batch Job Event")
+  print("<<< <<< <<< Starting to process S3 Batch Job Event (Version: {}, Made Time: {})".format(VERSION, MADE_TIME))
   print(event)
 
   # Parse job parameters from Amazon S3 batch operations
@@ -36,8 +38,8 @@ def handler(event, context):
       print("Failed reading options. {}".format(e))
       results.append({
           'taskId': taskId,
-          'resultCode': 'fail-read-event',
-          'resultString': srcKey
+          'resultCode': 'TemporaryFailure',
+          'resultString': 'fail-read-event'
       })
       continue
 
@@ -46,6 +48,11 @@ def handler(event, context):
     # Checking the extension
     if not srcKey.endswith(SRC_EXT):
       print('Skipping non-pdf {}'.format(srcKey))
+      results.append({
+          'taskId': taskId,
+          'resultCode': 'Succeeded',
+          'resultString': 'non-pdf'
+      })
       continue
 
     # dst bucket
@@ -68,8 +75,8 @@ def handler(event, context):
       print("Failed downloading source file. {}".format(e))
       results.append({
           'taskId': taskId,
-          'resultCode': 'fail-read-pdf',
-          'resultString': srcKey
+          'resultCode': 'TemporaryFailure',
+          'resultString': 'fail-read-pdf'
       })
       continue
 
@@ -83,8 +90,8 @@ def handler(event, context):
       print("Failed writing source file. {} : {}".format(e, TMP_DIR + '/' + pdf_file))
       results.append({
           'taskId': taskId,
-          'resultCode': 'write-read-pdf',
-          'resultString': srcKey
+          'resultCode': 'TemporaryFailure',
+          'resultString': 'write-read-pdf'
       })
       continue
 
@@ -100,14 +107,15 @@ def handler(event, context):
 
       exists = os.path.isfile(TMP_DIR + '/' + pdf_file)
       if exists:
-        rlt = os.popen("convert {}/{} -density 225 -background white -alpha remove -resize 1000x4000 {}/{}".format(TMP_DIR, pdf_file, TMP_DIR, png_file)).readlines()
+        # rlt = os.popen("convert {}/{} -density 225 -background white -alpha remove -resize 1000x4000 {}/{}".format(TMP_DIR, pdf_file, TMP_DIR, png_file)).readlines()
+        rlt = os.popen("convert -colorspace RGB -density 300 -quality 100 {}/{} {}/{}".format(TMP_DIR, pdf_file, TMP_DIR, png_file)).readlines()
         print(rlt)
       else:
         print("Not found file={}/{}".format(TMP_DIR, pdf_file))
         results.append({
             'taskId': taskId,
-            'resultCode': 'fail-not-found-pdf',
-            'resultString': srcKey
+            'resultCode': 'TemporaryFailure',
+            'resultString': 'fail-not-found-pdf'
         })
         continue
 
@@ -119,8 +127,8 @@ def handler(event, context):
       print("Failed converting. {}".format(e))
       results.append({
           'taskId': taskId,
-          'resultCode': 'fail-convert-pdf',
-          'resultString': srcKey
+          'resultCode': 'TemporaryFailure',
+          'resultString': 'fail-convert-pdf'
       })
       continue
 
@@ -135,8 +143,8 @@ def handler(event, context):
           print("Failed reading {} file={}".format(e, TMP_DIR + '/' + file))
           results.append({
               'taskId': taskId,
-              'resultCode': 'fail-read-image',
-              'resultString': srcKey
+              'resultCode': 'TemporaryFailure',
+              'resultString': 'fail-read-image'
           })
           continue
 
@@ -156,19 +164,19 @@ def handler(event, context):
           print("Failed uploading {} file={}".format(e, file))
           results.append({
               'taskId': taskId,
-              'resultCode': 'fail-upload-image',
-              'resultString': srcKey
+              'resultCode': 'TemporaryFailure',
+              'resultString': 'fail-upload-image'
           })
           continue
     results.append({
         'taskId': taskId,
-        'resultCode': 'success',
+        'resultCode': 'Succeeded',
         'resultString': srcKey
     })
   print("Done all action >>> >>> >>>")
   return {
       'invocationSchemaVersion': invocationSchemaVersion,
-      'treatMissingKeysAs': 'PermanentFailure',
+      # 'treatMissingKeysAs': 'PermanentFailure',
       'invocationId': invocationId,
       'results': results
   }

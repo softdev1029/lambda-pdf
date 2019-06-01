@@ -8,11 +8,13 @@ DST_BUCKET = "prodsdsimg"
 SRC_EXT = ".pdf"
 DST_EXT = ".png"
 TMP_DIR = "/tmp"
+VERSION = 1
+MADE_TIME = '05-10 10:20 AM'
 
 def handler(event, context):
 
   # Read options from the event.
-  print("<<< <<< <<< Starting to process S3 Add Event")
+  print("<<< <<< <<< Starting to process S3 Add Event (Version: {}, Made Time: {})".format(VERSION, MADE_TIME))
   print(event)
 
   try:
@@ -71,7 +73,8 @@ def handler(event, context):
 
     exists = os.path.isfile(TMP_DIR + '/' + pdf_file)
     if exists:
-      rlt = os.popen("convert {}/{} -density 225 -background white -alpha remove -resize 1000x4000 {}/{}".format(TMP_DIR, pdf_file, TMP_DIR, png_file)).readlines()
+      #rlt = os.popen("convert -density 225 -background white -alpha remove -resize 1000x4000 {}/{} {}/{}".format(TMP_DIR, pdf_file, TMP_DIR, png_file)).readlines()
+      rlt = os.popen("convert -colorspace RGB -density 300 -quality 100 {}/{} {}/{}".format(TMP_DIR, pdf_file, TMP_DIR, png_file)).readlines()
       print(rlt)
     else:
       print("Not found file={}/{} >>> >>> >>>".format(TMP_DIR, pdf_file))
