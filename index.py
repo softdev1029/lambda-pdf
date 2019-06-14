@@ -8,8 +8,8 @@ DST_BUCKET = "prodsdsimg"
 SRC_EXT = ".pdf"
 DST_EXT = ".png"
 TMP_DIR = "/tmp"
-VERSION = 1
-MADE_TIME = '05-10 10:20 AM'
+VERSION = 2
+MADE_TIME = '06-14 09:27 AM'
 
 s3 = boto3.resource('s3')
 sqs = boto3.client('sqs', region_name=SQS_REGION)
@@ -64,6 +64,7 @@ def handler(event, context):
     print("Failed writing source file. {} : {} >>> >>> >>>".format(e, TMP_DIR + '/' + pdf_file))
     return
 
+  print("Start to convert {}".format(srcKey))
   try:
     # Converting PDF to Image
     rlt = os.popen('ls ' + TMP_DIR).readlines()
@@ -128,6 +129,7 @@ def handler(event, context):
     "images": sqs_msg_imgs
   }
   msg_str = json.dumps(msg)
+  print("Start to send the SQS message {}".format(msg_str))
   try:
     response = sqs.send_message(
         QueueUrl=SQS_URL,
