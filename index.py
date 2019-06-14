@@ -1,3 +1,4 @@
+import json
 import os
 import boto3
 from os import path
@@ -8,8 +9,8 @@ DST_BUCKET = "prodsdsimg"
 SRC_EXT = ".pdf"
 DST_EXT = ".png"
 TMP_DIR = "/tmp"
-VERSION = 2
-MADE_TIME = '06-14 09:27 AM'
+VERSION = 7
+MADE_TIME = '06-14 10:23 AM'
 
 s3 = boto3.resource('s3')
 sqs = boto3.client('sqs', region_name=SQS_REGION)
@@ -67,23 +68,29 @@ def handler(event, context):
   print("Start to convert {}".format(srcKey))
   try:
     # Converting PDF to Image
+    print("Step 1: ls tmp_dir")
     rlt = os.popen('ls ' + TMP_DIR).readlines()
     print(rlt)
 
-    rlt = os.popen('./convert --version').readlines()
+    print("Step 2: check imagemagick version")
+    rlt = os.popen('convert --version').readlines()
     print(rlt)
 
     png_file = pdf_file.replace(SRC_EXT, DST_EXT)
 
+    print("Step 3: check existence of PDF file")
     exists = os.path.isfile(TMP_DIR + '/' + pdf_file)
     if exists:
       #rlt = os.popen("convert -density 225 -background white -alpha remove -resize 1000x4000 {}/{} {}/{}".format(TMP_DIR, pdf_file, TMP_DIR, png_file)).readlines()
+      print("Step 4: converting now...")
       rlt = os.popen("convert -colorspace RGB -density 300 -quality 100 {}/{} {}/{}".format(TMP_DIR, pdf_file, TMP_DIR, png_file)).readlines()
       print(rlt)
     else:
+      print("Step 4: faile to convert")
       print("Not found file={}/{} >>> >>> >>>".format(TMP_DIR, pdf_file))
       return
 
+    print("Step 5: ls tmp_dir for checking PNG result files")
     rlt = os.popen('ls ' + TMP_DIR).readlines()
     print(rlt)
 
@@ -94,10 +101,13 @@ def handler(event, context):
 
   sqs_msg_imgs = []
 
+  print("Step 6: loop for sending")
   for file in os.listdir(TMP_DIR):
     if file.startswith(src_name) and file.endswith(DST_EXT):
       try:
+        print("Step 6.1: open image file")
         img_file = open(TMP_DIR + '/' + file, 'rb')
+        print("Step 6.2: read image file")
         buffer = img_file.read()
         os.remove(TMP_DIR + '/' + file)
         img_file.close()
@@ -109,6 +119,7 @@ def handler(event, context):
         index = index.replace(DST_EXT, '')
         img_name = "{}-{}{}".format(dstKey, index, DST_EXT)
         # Uploading the image
+        print("Step 6.3: start to upload image file")
         obj = s3.Object(
           bucket_name=dstBucket,
           key=img_name,
@@ -122,9 +133,11 @@ def handler(event, context):
           "key": "test_images/" + img_name
         };
         sqs_msg_imgs.append(img)
+        print("Step 6.4: made message={}".format(json.dumps(img)))
       except Exception as e:
         print("Failed uploading {} file={}".format(e, file))
   # Send message to SQS queue
+  print("Step 7: send message")
   msg = {
     "images": sqs_msg_imgs
   }
