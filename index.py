@@ -9,8 +9,8 @@ DST_BUCKET = "prodsdsimg"
 SRC_EXT = ".pdf"
 DST_EXT = ".png"
 TMP_DIR = "/tmp"
-VERSION = 7
-MADE_TIME = '06-14 10:23 AM'
+VERSION = 8
+MADE_TIME = '06-28 11:15 PM'
 
 s3 = boto3.resource('s3')
 sqs = boto3.client('sqs', region_name=SQS_REGION)
@@ -130,7 +130,7 @@ def handler(event, context):
 
         img = {
           "bucket": DST_BUCKET,
-          "key": "test_images/" + img_name
+          "key": DST_BUCKET + "/" + img_name
         };
         sqs_msg_imgs.append(img)
         print("Step 6.4: made message={}".format(json.dumps(img)))
